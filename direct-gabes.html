@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gabès Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        .gabes-pin {
+            background-color: red;
+            border: 3px solid white;
+            border-radius: 50%;
+            width: 25px !important;
+            height: 25px !important;
+            margin-left: -12px !important;
+            margin-top: -12px !important;
+            box-shadow: 0 0 15px rgba(0,0,0,0.5);
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        // Wait until DOM is loaded
+        window.onload = function() {
+            // EXACT coordinates of Gabès from landmarks-data.js
+            const GABES_LAT = 33.8815;
+            const GABES_LNG = 10.0982;
+            
+            // Create map with Gabès centered
+            const map = L.map('map', {
+                center: [GABES_LAT, GABES_LNG],
+                zoom: 13
+            });
+            
+            // Add base map layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Create custom icon for Gabès pin
+            const gabesIcon = L.divIcon({
+                className: 'gabes-pin',
+                iconSize: [25, 25],
+                iconAnchor: [12, 12]
+            });
+            
+            // Add marker at Gabès
+            const marker = L.marker([GABES_LAT, GABES_LNG], {
+                icon: gabesIcon
+            }).addTo(map);
+            
+            // Add popup showing Gabès
+            marker.bindPopup("<b>Gabès, Tunisia</b><br>33.8815, 10.0982").openPopup();
+            
+            // Add circle showing Gabès area
+            L.circle([GABES_LAT, GABES_LNG], {
+                color: 'red',
+                fillColor: '#f03',
+                fillOpacity: 0.2,
+                radius: 1000
+            }).addTo(map);
+            
+            // Log confirmation
+            console.log("Map centered on Gabès: " + GABES_LAT + ", " + GABES_LNG);
+            
+            // Force center again after 1 second to be absolutely sure
+            setTimeout(function() {
+                map.setView([GABES_LAT, GABES_LNG], 13);
+                console.log("Forced center on Gabès again");
+            }, 1000);
+        };
+    </script>
+</body>
+</html>

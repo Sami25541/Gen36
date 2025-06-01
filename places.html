@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tunisia Places Explorer</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        .search-container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .search-box {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .place-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .place-name {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .place-description {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        .place-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .detail-section {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .detail-section h3 {
+            margin: 0 0 15px 0;
+            color: #333;
+            font-size: 18px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 8px;
+        }
+        .detail-section ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .detail-section li {
+            margin-bottom: 8px;
+            color: #666;
+            line-height: 1.4;
+        }
+        #map {
+            height: 400px;
+            margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 18px;
+        }
+        .history-section, .climate-section, .transportation-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        .section-title {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 15px;
+            font-weight: 500;
+        }
+        .section-content {
+            color: #666;
+            line-height: 1.6;
+        }
+        .location-controls {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .location-btn {
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .location-btn:hover {
+            background: #45a049;
+        }
+        .location-status {
+            color: #666;
+            font-size: 14px;
+        }
+        .nearby-places {
+            margin-top: 20px;
+        }
+        .nearby-place {
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .nearby-place:hover {
+            background: #f5f5f5;
+        }
+        .distance {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <h1>Tunisia Places Explorer</h1>
+        <div class="location-controls">
+            <button id="get-location" class="location-btn">Use My Location</button>
+            <span id="location-status" class="location-status"></span>
+        </div>
+        <input type="text" id="search-input" class="search-box" placeholder="Search for a place in Tunisia...">
+        <div id="results-container"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="js/places-data.js"></script>
+    <script>
+        let map = null;
+        let currentMarker = null;
+        let userMarker = null;
+        let userLocation = null;
+
+        // Function to calculate distance between two points using Haversine formula
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Radius of the earth in km
+            const dLat = deg2rad(lat2 - lat1);
+            const dLon = deg2rad(lon2 - lon1);
+            const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2); 
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+            const distance = R * c; // Distance in km
+            return distance;
+        }
+
+        function deg2rad(deg) {
+            return deg * (Math.PI/180);
+        }
+
+        // Function to find nearby places
+        function findNearbyPlaces(userLat, userLng, radius = 50) { // radius in km
+            const nearby = [];
+            
+            for (const [key, place] of Object.entries(tunisianPlaces)) {
+                const distance = calculateDistance(
+                    userLat, 
+                    userLng, 
+                    place.location.lat, 
+                    place.location.lng
+                );
+                
+                if (distance <= radius) {
+                    nearby.push({
+                        ...place,
+                        distance: distance.toFixed(1)
+                    });
+                }
+            }
+            
+            return nearby.sort((a, b) => a.distance - b.distance);
+        }
+
+        // Function to get user's location
+        function getUserLocation() {
+            const statusElement = document.getElementById('location-status');
+            statusElement.textContent = 'Getting your location...';
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude
+                        };
+                        
+                        statusElement.textContent = 'Location found!';
+                        
+                        // Find nearby places
+                        const nearby = findNearbyPlaces(userLocation.lat, userLocation.lng);
+                        
+                        // Display nearby places
+                        const resultsContainer = document.getElementById('results-container');
+                        resultsContainer.innerHTML = `
+                            <h2>Places Near You</h2>
+                            <div class="nearby-places">
+                                ${nearby.map(place => `
+                                    <div class="nearby-place" onclick="displayPlace(${JSON.stringify(place)})">
+                                        <div class="place-name">${place.name}</div>
+                                        <div class="distance">${place.distance} km away</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+
+                        // Update map
+                        if (!map) {
+                            map = L.map('map').setView([userLocation.lat, userLocation.lng], 10);
+                            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                attribution: '© OpenStreetMap contributors'
+                            }).addTo(map);
+                        } else {
+                            map.setView([userLocation.lat, userLocation.lng], 10);
+                        }
+
+                        // Add user location marker
+                        if (userMarker) {
+                            map.removeLayer(userMarker);
+                        }
+                        userMarker = L.marker([userLocation.lat, userLocation.lng])
+                            .addTo(map)
+                            .bindPopup('Your Location')
+                            .openPopup();
+                    },
+                    (error) => {
+                        statusElement.textContent = 'Error getting location: ' + error.message;
+                    }
+                );
+            } else {
+                statusElement.textContent = 'Geolocation is not supported by your browser';
+            }
+        }
+
+        function displayPlace(place) {
+            const resultsContainer = document.getElementById('results-container');
+            const placeCard = document.createElement('div');
+            placeCard.className = 'place-card';
+            
+            placeCard.innerHTML = `
+                <div class="place-name">${place.name}</div>
+                <div class="place-description">${place.description}</div>
+                
+                <div class="place-details">
+                    <div class="detail-section">
+                        <h3>Governorate</h3>
+                        <div>${place.governorate}</div>
+                    </div>
+                    <div class="detail-section">
+                        <h3>Population</h3>
+                        <div>${place.population}</div>
+                    </div>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Landmarks</h3>
+                    <ul>
+                        ${place.landmarks.map(landmark => `<li>${landmark}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div class="detail-section">
+                    <h3>Attractions</h3>
+                    <ul>
+                        ${place.attractions.map(attraction => `<li>${attraction}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div class="history-section">
+                    <div class="section-title">History</div>
+                    <div class="section-content">${place.history}</div>
+                </div>
+
+                <div class="climate-section">
+                    <div class="section-title">Climate</div>
+                    <div class="section-content">${place.climate}</div>
+                </div>
+
+                <div class="transportation-section">
+                    <div class="section-title">Transportation</div>
+                    <ul>
+                        ${place.transportation.map(transport => `<li>${transport}</li>`).join('')}
+                    </ul>
+                </div>
+
+                <div id="map"></div>
+            `;
+            
+            resultsContainer.innerHTML = '';
+            resultsContainer.appendChild(placeCard);
+
+            // Initialize map
+            if (!map) {
+                map = L.map('map').setView([place.location.lat, place.location.lng], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(map);
+            } else {
+                map.setView([place.location.lat, place.location.lng], 13);
+            }
+
+            // Add marker
+            if (currentMarker) {
+                map.removeLayer(currentMarker);
+            }
+            currentMarker = L.marker([place.location.lat, place.location.lng]).addTo(map);
+
+            // If we have user location, show it and the distance
+            if (userLocation) {
+                if (!userMarker) {
+                    userMarker = L.marker([userLocation.lat, userLocation.lng])
+                        .addTo(map)
+                        .bindPopup('Your Location');
+                }
+                
+                // Draw a line between user and place
+                const line = L.polyline([
+                    [userLocation.lat, userLocation.lng],
+                    [place.location.lat, place.location.lng]
+                ], {color: 'red'}).addTo(map);
+            }
+        }
+
+        function handleSearch() {
+            const searchInput = document.getElementById('search-input');
+            const searchTerm = searchInput.value.trim();
+            
+            if (searchTerm === '') {
+                document.getElementById('results-container').innerHTML = '';
+                return;
+            }
+
+            const results = searchPlace(searchTerm);
+            const resultsContainer = document.getElementById('results-container');
+            
+            if (results.length === 0) {
+                resultsContainer.innerHTML = '<div class="no-results">No places found matching your search.</div>';
+                return;
+            }
+
+            // Display the first result
+            displayPlace(results[0]);
+        }
+
+        // Add event listeners
+        document.getElementById('search-input').addEventListener('input', handleSearch);
+        document.getElementById('get-location').addEventListener('click', getUserLocation);
+    </script>
+</body>
+</html> 

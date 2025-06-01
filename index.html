@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ShopTunisia - Checkout</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <div class="store-logo">ShopTunisia</div>
+            <div class="checkout-steps">
+                <div class="step completed">Cart</div>
+                <div class="step active">Delivery</div>
+                <div class="step">Payment</div>
+                <div class="step">Confirmation</div>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="checkout-container">
+                <div class="checkout-sidebar">
+                    <div class="order-summary">
+                        <h3>Order Summary</h3>
+                        <div class="order-items">
+                            <div class="order-item">
+                                <div class="item-image"></div>
+                                <div class="item-details">
+                                    <div class="item-name">Traditional Ceramic Bowl</div>
+                                    <div class="item-price">39.99 TND</div>
+                                </div>
+                                <div class="item-quantity">2</div>
+                            </div>
+                            <div class="order-item">
+                                <div class="item-image"></div>
+                                <div class="item-details">
+                                    <div class="item-name">Handmade Olive Wood Cutting Board</div>
+                                    <div class="item-price">75.50 TND</div>
+                                </div>
+                                <div class="item-quantity">1</div>
+                            </div>
+                        </div>
+                        <div class="order-totals">
+                            <div class="subtotal">
+                                <span>Subtotal:</span>
+                                <span>155.48 TND</span>
+                            </div>
+                            <div class="shipping">
+                                <span>Shipping:</span>
+                                <span>12.00 TND</span>
+                            </div>
+                            <div class="total">
+                                <span>Total:</span>
+                                <span>167.48 TND</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="checkout-main">
+                    <div class="checkout-section">
+                        <h2>Delivery Information</h2>
+                        <form id="checkout-form">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="fullname">Full Name</label>
+                                    <input type="text" id="fullname" name="fullname" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="phone">Phone Number</label>
+                                    <input type="tel" id="phone" name="phone" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="email">Email</label>
+                                <input type="email" id="email" name="email" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="address">Delivery Address</label>
+                                <textarea id="address" name="address" rows="3" required placeholder="Enter your full address for delivery"></textarea>
+                            </div>
+                            <div class="address-verification">
+                                <div id="verification-status" class="pending">
+                                    <span class="status-icon">?</span>
+                                    <span class="status-text">Address needs verification</span>
+                                </div>
+                                <button type="button" id="verify-address-btn">Verify Address</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="checkout-actions">
+                        <button id="back-to-cart" class="secondary-btn">Back to Cart</button>
+                        <button id="continue-to-payment" class="primary-btn" disabled>Continue to Payment</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Location verification modal -->
+    <div class="modal" id="location-modal">
+        <div class="modal-content location-modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>Address Verification</h3>
+            
+            <div class="location-verification-container">
+                <div class="verification-status-header">
+                    <div id="modal-verification-status" class="pending">
+                        <span class="status-icon">?</span>
+                        <span class="status-text">We need to verify your location</span>
+                    </div>
+                </div>
+                
+                <div class="location-content">
+                    <div id="map-container"></div>
+                    
+                    <div class="location-sidebar">
+                        <div class="location-input-section">
+                            <div id="ai-status-message" class="hidden">
+                                <p>Our AI assistant is helping locate your address...</p>
+                            </div>
+                            
+                            <div class="confidence-indicator">
+                                <div class="confidence-label">Address Confidence:</div>
+                                <div class="confidence-meter">
+                                    <div class="confidence-level" id="confidence-level"></div>
+                                </div>
+                                <div class="confidence-percentage" id="confidence-percentage">0%</div>
+                            </div>
+                        </div>
+
+                        <div class="chat-container">
+                            <div class="chat-messages" id="chat-messages">
+                                <!-- AI conversation will appear here -->
+                            </div>
+                            <div class="chat-input">
+                                <input type="text" id="chat-input" placeholder="Reply to assistant...">
+                                <button id="send-btn">Send</button>
+                            </div>
+                            <div class="chat-actions">
+                                <button id="voice-btn" class="action-btn">
+                                    <span class="icon">🎤</span> Voice
+                                </button>
+                                <button id="photo-btn" class="action-btn">
+                                    <span class="icon">📷</span> Photo
+                                </button>
+                                <button id="confirm-btn" class="action-btn confirm">
+                                    <span class="icon">✓</span> Confirm This Location
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="location-details" id="location-details">
+                    <h4>Delivery Location Details</h4>
+                    <div class="detail-item">
+                        <span class="detail-label">Area:</span>
+                        <span class="detail-value" id="area-value">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Landmarks:</span>
+                        <span class="detail-value" id="landmarks-value">--</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Directions:</span>
+                        <span class="detail-value" id="directions-value">--</span>
+                    </div>
+                </div>
+                
+                <div class="location-actions">
+                    <button id="cancel-verification" class="secondary-btn">Cancel</button>
+                    <button id="confirm-address" class="primary-btn" disabled>Use This Address</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Photo upload modal -->
+    <div class="modal" id="photo-modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h3>Upload Location Photo</h3>
+            <p>Take or upload a photo of your house or a nearby landmark</p>
+            <div class="file-upload">
+                <input type="file" id="photo-upload" accept="image/*">
+                <label for="photo-upload">Choose File</label>
+            </div>
+            <div class="preview-container">
+                <img id="photo-preview" src="" alt="">
+            </div>
+            <button id="upload-photo-btn">Upload Photo</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="landmarks-data.js"></script>
+    <script src="ai-assistant.js"></script>
+    <script src="map-controller-clean.js"></script>
+    <script src="app.js"></script>
+    <script src="force-gabes.js"></script>
+</body>
+</html>
